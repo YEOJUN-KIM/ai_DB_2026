@@ -21,11 +21,11 @@ PostgreSQL은 **오픈소스 시스템**으로, 라이선스 비용 없이 사�
 
 #### DB의 특징
 
-- 데이터 무결성
-- 데이터 안정성
-- 데이터 동시성
-- 표준SQL 지원
-- 확장성
+- 데이터 무결성: 정해진 규칙에 맞는 데이터를 유지
+- 데이터 안정성: 장애로부터 데이터를 보호하고 복구할 수 있도록 관리
+- 데이터 동시성: 여러 사용자가 동시에 데이터를 조회·변경할 수 있도록 관리
+- 표준 SQL 지원: 표준 SQL 문법으로 데이터를 다룰 수 있음
+- 확장성: 필요에 따라 기능이나 처리 능력을 확장할 수 있음
 
 ### PostgreSQL 설치
 
@@ -207,6 +207,8 @@ DBeaver는 GUI로 데이터베이스를 관리하고 SQL을 실행하는 도구�
 
 ### PostgreSQL 기본 타입
 
+데이터 타입은 각 열에 저장할 값의 종류를 정한다. 예를 들어 이름은 문자열, 나이는 정수 타입으로 지정한다.
+
 | 데이터 타입 |        설명        |          예제          |
 | :---------: | :----------------: | :---------------------: |
 |     INT     |        정수        |       10, 25, -9       |
@@ -220,6 +222,9 @@ DBeaver는 GUI로 데이터베이스를 관리하고 SQL을 실행하는 도구�
 |    JSONB    |    JSON 데이터    |   {"name" : "홍길동"}   |
 
 ### 테이블 생성
+
+테이블은 데이터를 행과 열로 저장하는 구조다.
+
 
 1. DBeaver에서 새 PostgreSQL 연결을 만들고 Database를 `ai_db`로 설정
    - Host, Port, Username, Password는 앞서 사용한 연결과 동일
@@ -239,12 +244,22 @@ create table students (
 );
 ```
 
+- `PRIMARY KEY`: 각 행을 고유하게 구분하는 기본 키
+- `GENERATED ALWAYS AS IDENTITY`: 식별 번호를 자동 생성
+- `NOT NULL`: 값이 비어 있는 상태(NULL)를 허용하지 않음
+- `DEFAULT`: 값을 생략했을 때 사용할 기본값 지정
+
 - 입력 후 실행(Ctrl + Enter) 후 새로고침(F5)
 
 ### 데이터 조작어(DML)
 
+- DML(Data Manipulation Language)은 테이블의 데이터를 추가·수정·삭제하는 SQL 명령어다.
+- 여기서는 데이터 조회(SELECT)도 함께 다루며, CRUD의 네 가지 기본 동작을 실습한다.
+- [예제 보러가기](./DB_Practice/practice01.sql)
 
-#### INSERT
+#### 데이터 생성 (INSERT문)
+- Insert 쿼리를 통해 데이터를 추가
+- 추가 후 select 쿼리로 확인
 
 ```sql
  -- Insert문 예제
@@ -254,15 +269,21 @@ insert into students (name, age, email) values
 ('김영희', 21, 'KIM2@example.com');
 ```
 
-#### SELECT
+#### 데이터 조회 (SELECT문)
+
+- `SELECT`는 테이블의 데이터를 조회한다. 
+- `*`를 사용하면 모든 열을 조회하고, 원하는 열 이름을 지정하면 해당 열만 조회한다.
+- 여러 열을 조회하려면 `name`, `age`처럼 열 이름을 쉼표로 구분한다.
 
 ```sql
 -- Select문 예제
 select * from students;
-select name from students;
+select name, age from students;
 ```
 
-#### UPDATE
+#### 데이터 수정 (UPDATE문)
+
+- `UPDATE`는 테이블의 데이터를 수정하고, `SET`으로 변경할 열과 값을 지정한다.
 
 ```sql
 -- Update문 예제
@@ -271,7 +292,9 @@ update students set
 	where id = 1;
 ```
 
-#### DELETE
+#### 데이터 삭제 (DELETE문)
+
+- `DELETE`는 테이블에서 행을 삭제한다.
 
 ```sql
 -- Delete문 예제
@@ -280,3 +303,81 @@ delete from students
 ```
 
 ## 2일차
+
+### 데이터 조회 활용
+- [예제 보러가기](./DB_Practice/practice02.sql)
+
+#### 조건 지정 (WHERE절)
+
+- `WHERE`는 조건에 맞는 행만 조회·수정·삭제하도록 대상을 지정한다.
+- EX) `WHERE id = 1`은 `id`가 1인 행을, `WHERE name = '홍길동'`은 이름이 홍길동인 행을 대상으로 한다.
+- `UPDATE`나 `DELETE`에서 `WHERE`를 생략하면 테이블의 모든 행이 수정·삭제 대상이 되니 주의.
+- 여러 조건을 연결할 때는 `AND` 또는 `OR`를 사용한다.
+  - `AND`: 모든 조건을 만족하는 행
+  - `OR`: 조건 중 하나 이상을 만족하는 행
+- `AND`와 `OR`를 함께 사용할 때는 괄호로 조건을 묶으면 의도를 명확하게 표현할 수 있다.
+
+```sql
+-- 나이가 21이면서 이름이 '김'으로 시작하는 학생
+select * from students
+where age = 21 and name like '김%';
+
+-- 나이가 20이거나 21인 학생
+select * from students
+where age = 20 or age = 21;
+
+-- 나이가 20 또는 21이면서 이름이 '김'으로 시작하는 학생
+select * from students
+where (age = 20 or age = 21) and name like '김%';
+```
+
+#### 문자열 패턴 검색 (LIKE 연산자)
+
+- `LIKE`는 문자열이 특정 패턴과 일치하는지 비교하는 연산자로, `WHERE`절에서 원하는 데이터를 찾을 때 사용한다.
+- `%`: 글자가 없거나 여러 글자인 경우에 일치
+- `_`: 정확히 한 글자에 일치
+
+```sql
+-- 이름이 '김'으로 시작하는 학생 조회
+select * from students where name like '김%';
+
+-- 이름에 '영'이 포함된 학생 조회
+select * from students where name like '%영%';
+
+-- 이름이 '수'로 끝나는 학생 조회
+select * from students where name like '%수';
+
+-- '김' 뒤에 정확히 두 글자가 오는 학생 (김OO) 조회
+select * from students where name like '김__';
+```
+
+#### 조회 결과 정렬 (ORDER BY절)
+
+- `ORDER BY`는 조회 결과를 지정한 열의 값에 따라 정렬한다. 저장된 데이터 자체의 순서를 바꾸는 것은 아니다.
+- `ASC`: 오름차순(작은 값부터), 생략하면 기본 적용
+- `DESC`: 내림차순(큰 값부터)
+- 여러 열을 쉼표로 구분하면 앞의 열부터 정렬하고, 값이 같을 때 다음 열을 기준으로 정렬한다.
+- `WHERE`와 함께 사용하면 `ORDER BY`를 `WHERE` 뒤에 작성한다.
+- `ORDER BY`를 지정하지 않으면 조회 결과의 순서는 보장되지 않는다.
+
+```sql
+-- 나이가 적은 순으로 조회하고, 나이가 같으면 id가 작은 순으로 정렬
+select * from students
+order by age asc, id asc;
+
+-- 이름이 '김'으로 시작하는 학생을 나이가 많은 순으로 조회
+select * from students
+where name like '김%'
+order by age desc, id asc;
+```
+#### 조회 결과 개수 제한 (LIMIT절)
+
+- `LIMIT`은 조회 결과로 반환할 행의 최대 개수를 지정한다.
+- EX) `LIMIT 3`는 최대 3개의 행만 조회한다.
+
+```sql
+-- id가 큰 순으로 학생 3명을 조회
+select * from students
+order by id desc
+limit 3;
+```
