@@ -11,6 +11,15 @@ create table students (
 	created_at timestamp default current_timestamp 		-- 현재 작성된 일자
 );
 
+CREATE TABLE students (
+id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+name VARCHAR(50) NOT NULL,
+age INT,
+email VARCHAR(100),
+major VARCHAR(50),
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Insert문
 insert into students (name, age, email) values
 ('홍길동', 20, 'hong@example.com'),
@@ -29,6 +38,3 @@ update students set
 -- Delete문
 delete from students 
 where name = '홍길동';
-
-
-

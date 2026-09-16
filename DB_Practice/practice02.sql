@@ -96,3 +96,12 @@ order by s.age desc, s.id asc;
 select * from students
 order by id desc
 limit 3;
+
+-- 이메일 값이 없는 학생 조회
+select * from students
+where email is null;
+
+-- 이메일 값이 있는 학생 조회
+select * from students
+where email is not null;
+
