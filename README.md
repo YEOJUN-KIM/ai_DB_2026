@@ -448,3 +448,182 @@ where email is not null;
 
 - 필수 입력은 `NOT NULL`, 나이 제한은 `CHECK (age <= 150)`으로 지정한다.
 - 정확한 숫자는 `NUMERIC`, 긴 글은 `TEXT`, 날짜만 필요하면 `DATE`, 참/거짓은 `BOOLEAN`
+
+
+## 3일차
+
+### 테이블 구조 변경 및 삭제 (DDL)
+
+- DDL(Data Definition Language)은 테이블 등 데이터베이스 객체의 구조를 생성·변경·삭제하는 명령어다.
+- `CREATE TABLE`: 테이블 생성 / `ALTER TABLE`: 테이블 구조 변경 / `DROP TABLE`: 테이블 삭제
+
+#### 테이블 구조 변경 (ALTER TABLE문)
+
+- 이미 만들어진 테이블의 열을 추가·변경·삭제하거나 제약조건을 설정한다.
+- `UPDATE`가 행에 저장된 값을 수정한다면, `ALTER TABLE`은 열이나 제약조건 같은 구조를 수정한다.
+
+```sql
+-- 연락처 열 추가
+alter table students add column phone varchar(20);
+
+-- 연락처 열의 최대 길이 변경
+alter table students alter column phone type varchar(30);
+
+-- 열 이름 변경
+alter table students rename column phone to phone_number;
+
+-- 열 삭제: 해당 열에 저장된 데이터도 함께 삭제됨
+alter table students drop column phone_number;
+```
+
+### 제약조건 활용
+
+- 제약조건은 잘못된 데이터가 저장되지 않도록 테이블에 설정하는 규칙이다.
+- `ADD CONSTRAINT`로 규칙에 이름을 붙여 추가하고, `DROP CONSTRAINT`로 제거할 수 있다.
+
+#### 중복 방지 (UNIQUE 제약조건)
+
+- 지정한 열에 같은 값이 중복 저장되지 않도록 한다.
+- EX) 다른 학생이 사용 중인 이메일은 등록할 수 없지만, 중복되지 않는 다른 이메일로 변경할 수 있다.
+- PostgreSQL의 기본 `UNIQUE` 설정은 `NULL`을 여러 행에 허용한다. 필수 입력까지 요구하려면 `NOT NULL`도 지정한다.
+
+```sql
+-- 학생 이메일에 중복 방지 제약조건 추가
+alter table public.students
+add constraint uk_students_email unique (email);
+```
+
+- `uk_students_email`은 직접 정한 제약조건 이름이다.
+- 이미 같은 이메일이 여러 행에 있으면 제약조건 추가가 실패한다.
+- 추가 후 중복 이메일을 입력하거나 수정하면 고유 제약조건 위반 오류(`23505`)가 발생한다.
+
+#### 값의 범위 제한 (CHECK 제약조건)
+
+- 저장할 값이 지정한 조건을 만족하는지 검사한다.
+- EX) 초등학교 학년은 1~6, 대학교 학년은 1~4, 나이는 0 이상으로 제한할 수 있다.
+
+```sql
+-- 학생 나이를 0 이상 150 이하로 제한
+alter table students
+add constraint ck_students_age check (age between 0 and 150);
+```
+
+- 기존 데이터가 조건을 위반하면 제약조건 추가가 실패한다.
+- `CHECK`만으로는 `NULL`을 막지 않는다. 나이 입력도 필수라면 `NOT NULL`을 함께 지정한다.
+
+#### 제약조건 삭제 (DROP CONSTRAINT)
+
+- 제약조건 이름을 지정해 규칙을 제거한다. 테이블과 기존 데이터는 유지된다.
+
+```sql
+-- 이메일 중복 방지 규칙 제거
+alter table students drop constraint uk_students_email;
+
+-- 나이 범위 제한 규칙 제거
+alter table students drop constraint ck_students_age;
+```
+
+### 테이블 삭제 (DROP TABLE문)
+
+- 테이블의 구조와 저장된 데이터를 함께 삭제한다.
+- `IF EXISTS`를 붙이면 해당 테이블이 없어도 오류 없이 넘어간다.
+
+```sql
+-- 삭제 연습용 테이블 생성
+create table drop_practice (
+    id int primary key
+);
+
+-- 연습용 테이블 삭제
+drop table if exists drop_practice;
+```
+
+| 명령어 | 삭제 대상 | 테이블 구조 유지 |
+| --- | --- | --- |
+| `DELETE FROM` | 조건에 맞는 행 (`WHERE` 생략 시 모든 행) | 유지 |
+| `TRUNCATE TABLE` | 모든 행 (`WHERE` 사용 불가) | 유지 |
+| `DROP TABLE` | 테이블 자체와 저장된 데이터 | 유지하지 않음 |
+
+- 다른 테이블이 외래 키로 참조하는 테이블은 기본적으로 바로 삭제할 수 없다. 연결된 제약조건부터 확인한다.
+
+### 테이블 관계 모델링
+
+![일대일 관계, 일대다 관계, 연결 테이블로 다대다 관계를 구현한 ERD 예시](./img/테이블관계.png)
+
+- 그림의 `PK`는 기본 키, `FK`는 외래 키를 뜻한다.
+- 아래쪽 수강 테이블은 학생과 과목을 연결하여 다대다 관계를 두 개의 일대다 관계로 나눈 예시다.
+- 그림의 테이블·열 이름은 개념 설명용이며, 실습에서 사용하는 이름과 다를 수 있다.
+
+테이블의 관계는 한 테이블의 행 하나가 다른 테이블의 몇 개의 행과 연결될 수 있는지를 나타낸다.
+`1`은 하나, `N`과 `M`은 여러 개를 뜻하며, 실제 연결된 데이터는 없을 수도 있다.
+
+| 관계 | 설명 | 예시 |
+| --- | --- | --- |
+| 일대일 (1:1) | 양쪽의 행이 서로 최대 하나씩 연결됨 | 학생 한 명과 학생 상세정보 한 건 |
+| 일대다 (1:N) | 한쪽의 행 하나에 다른 쪽의 여러 행이 연결될 수 있음 | 학생 한 명과 여러 수강 내역 |
+| 다대다 (N:M) | 양쪽 모두 상대편의 여러 행과 연결될 수 있음 | 여러 학생과 여러 과목 |
+
+#### 학생과 수강 내역의 관계 (1:N)
+
+- `students`에는 학생 정보를, `enrollments`에는 수강 내역을 저장한다.
+- 학생 한 명이 여러 과목을 수강할 수 있으므로 학생 쪽이 `1`, 수강 내역 쪽이 `N`이다.
+- `enrollments.students_id`가 `students.id`를 참조하는 외래 키(FK)다.
+- 참조되는 학생 테이블을 부모 테이블, 외래 키를 가진 수강 테이블을 자식 테이블이라고 부른다.
+
+EX) 학생 번호가 `1`인 학생이 세 과목을 수강하면 수강 테이블에는 다음과 같이 저장된다.
+
+| 수강 번호 `id` | 학생 번호 `students_id` | 과목 `course_name` |
+| --- | --- | --- |
+| 1 | 1 | PostgreSQL |
+| 2 | 1 | Python |
+| 3 | 1 | Java |
+
+- 각 수강 내역의 기본 키 `id`는 서로 다르지만, 외래 키 `students_id`는 반복될 수 있다.
+- 외래 키를 `NOT NULL`로 지정하면 각 수강 내역은 반드시 존재하는 학생 한 명과 연결된다.
+
+#### 일대일과 다대다 관계 구현
+
+- **1:1**: 자식 테이블의 외래 키에 `UNIQUE`를 지정하면 같은 부모를 여러 행이 참조하지 못하도록 제한할 수 있다.
+- **N:M**: 두 테이블 사이에 연결 테이블을 두어 두 개의 `1:N` 관계로 나눈다.
+- EX) 과목을 별도 `courses` 테이블로 관리한다면, `enrollments`에 학생 번호와 과목 번호를 외래 키로 저장한다.
+
+```text
+students (1) ── (N) enrollments (N) ── (1) courses
+```
+
+학생은 여러 수강 내역을 가질 수 있고, 과목 하나에도 여러 학생의 수강 내역이 연결될 수 있다.
+
+#### 학생·과목·수강 관리 ERD
+
+ERD는 테이블의 열과 키, 테이블 사이의 관계를 그림으로 나타낸 것이다.
+
+<img src="./img/학생수강관리_ERD.png" alt="학생·과목·수강 테이블의 ERD" width="700">
+
+- `students`: 학생 정보 / `courses`: 과목 정보 / `enrollments`: 수강 내역
+- `enrollments.student_id`는 `students.id`를, `enrollments.course_id`는 `courses.id`를 참조한다.
+- 앞의 단순 수강 예시와 달리, 이 구조는 과목을 별도 테이블로 분리하고 학생 번호 열 이름으로 `student_id`를 사용한다.
+- [테이블 생성 예제 보기](./DB_Practice/practice04.sql)
+
+### 여러 테이블을 연결해 조회하기 (JOIN)
+
+- `JOIN`은 여러 테이블의 행을 연결 조건에 따라 조합하여 함께 조회하는 기능이다.
+- 테이블 자체를 합치는 것이 아니라, 조회 결과에서 필요한 정보를 함께 보여준다.
+- EX) 학생 이름은 `students`, 과목명은 `courses`에 있으므로 `enrollments`를 통해 연결하면 누가 어떤 과목을 수강하는지 조회할 수 있다.
+
+#### 연결 조건 지정 (ON절)
+
+- `ON`에는 두 테이블의 행을 연결할 조건을 적는다. 보통 기본 키와 이를 참조하는 외래 키를 비교한다.
+- `s`, `e`, `c`는 테이블 별칭이며, `s.name`처럼 어느 테이블의 열인지 구분할 때 사용한다.
+
+```sql
+-- 학생 이름, 수강 과목명, 수강 신청 일시를 함께 조회
+select s.name, c.title, e.enrolled_at
+from students s
+join enrollments e on s.id = e.student_id
+join courses c on e.course_id = c.id;
+```
+
+- 첫 번째 `JOIN`: 학생 번호가 일치하는 학생과 수강 내역을 연결한다.
+- 두 번째 `JOIN`: 과목 번호가 일치하는 수강 내역과 과목을 연결한다.
+- `JOIN`만 쓰면 `INNER JOIN`과 같으며, 연결 조건에 맞는 행만 조회한다. 위 예제에서 수강 내역이 없는 학생은 결과에 나오지 않는다.
+- 한 학생이 여러 과목을 수강하면 결과에도 그 학생의 이름이 여러 행에 표시된다.
