@@ -627,3 +627,192 @@ join courses c on e.course_id = c.id;
 - 두 번째 `JOIN`: 과목 번호가 일치하는 수강 내역과 과목을 연결한다.
 - `JOIN`만 쓰면 `INNER JOIN`과 같으며, 연결 조건에 맞는 행만 조회한다. 위 예제에서 수강 내역이 없는 학생은 결과에 나오지 않는다.
 - 한 학생이 여러 과목을 수강하면 결과에도 그 학생의 이름이 여러 행에 표시된다.
+
+## 4일차
+
+### INNER JOIN
+
+- `INNER JOIN`은 양쪽 테이블에서 `ON` 조건이 일치하는 행만 조회한다.
+- `INNER`는 생략할 수 있으므로 `JOIN`과 `INNER JOIN`은 같은 결과를 반환한다.
+- EX) 수강 신청을 한 학생과 신청한 과목만 조회한다.
+
+```sql
+select s.name, c.title
+from students s
+inner join enrollments e on s.id = e.student_id
+inner join courses c on e.course_id = c.id;
+```
+
+수강 내역이 없는 학생이나 아무도 수강하지 않은 과목은 결과에 포함되지 않는다.
+
+### OUTER JOIN
+
+- `OUTER JOIN`은 연결 조건이 일치하는 행뿐만 아니라, 한쪽 또는 양쪽 테이블의 일치하지 않는 행도 함께 조회한다.
+- 상대 테이블에 일치하는 행이 없으면 해당 열은 `NULL`로 표시된다.
+- `OUTER`는 생략할 수 있으므로 `LEFT OUTER JOIN`은 `LEFT JOIN`과 같다.
+
+#### LEFT JOIN
+
+왼쪽 테이블의 모든 행을 유지한다. 다음 예제는 수강 여부와 관계없이 모든 학생을 조회한다.
+
+```sql
+select s.name, e.course_id
+from students s
+left join enrollments e on s.id = e.student_id;
+```
+
+#### RIGHT JOIN
+
+오른쪽 테이블의 모든 행을 유지한다. 다음 예제는 수강 신청 여부와 관계없이 모든 과목을 조회한다.
+
+```sql
+select e.student_id, c.title
+from enrollments e
+right join courses c on e.course_id = c.id;
+```
+
+#### FULL OUTER JOIN
+
+양쪽 테이블의 모든 행을 유지한다. 조건이 일치하는 행은 연결하고, 일치하지 않는 행도 각각 결과에 포함한다.
+
+```sql
+select s.name, e.course_id
+from students s
+full outer join enrollments e on s.id = e.student_id;
+```
+
+| 조인 종류 | 조회되는 행 |
+| --- | --- |
+| `INNER JOIN` | 양쪽 테이블의 조건이 일치하는 행 |
+| `LEFT JOIN` | 왼쪽 테이블의 모든 행과 오른쪽 테이블의 일치하는 행 |
+| `RIGHT JOIN` | 오른쪽 테이블의 모든 행과 왼쪽 테이블의 일치하는 행 |
+| `FULL OUTER JOIN` | 양쪽 테이블의 모든 행 |
+
+### 여러 행의 값을 계산하기 (집계 함수)
+
+집계 함수는 여러 행의 값을 하나의 결과로 계산할 때 사용한다.
+
+| 함수 | 설명 |
+| --- | --- |
+| `COUNT()` | 행 또는 값의 개수를 계산 |
+| `SUM()` | 숫자 값의 합계를 계산 |
+| `AVG()` | 숫자 값의 평균을 계산 |
+| `MAX()` | 가장 큰 값을 조회 |
+| `MIN()` | 가장 작은 값을 조회 |
+
+#### COUNT
+
+```sql
+-- 전체 학생 수
+select count(*) as student_count
+from students;
+
+-- 수강 신청을 한 학생 수(중복 제외)
+select count(distinct student_id) as enrolled_student_count
+from enrollments;
+```
+
+- `COUNT(*)`는 조회된 모든 행을 센다.
+- `COUNT(열 이름)`은 해당 열의 값이 `NULL`인 행을 제외하고 센다.
+- `DISTINCT`를 사용하면 중복 값을 한 번만 센다.
+
+#### SUM, AVG, MAX, MIN
+
+다음 예제는 `courses` 테이블에 숫자형 `price` 열이 있다고 가정한다.
+
+```sql
+select
+    sum(price) as total_price,
+    avg(price) as average_price,
+    max(price) as highest_price,
+    min(price) as lowest_price
+from courses;
+```
+
+- `SUM(price)`: 모든 과목 가격의 합계
+- `AVG(price)`: 과목 가격의 평균
+- `MAX(price)`: 가장 높은 과목 가격
+- `MIN(price)`: 가장 낮은 과목 가격
+- 집계 함수는 일반적으로 `NULL` 값을 계산에서 제외한다.
+
+#### GROUP BY
+
+`GROUP BY`는 같은 값을 가진 행을 하나의 그룹으로 묶어 그룹별 집계 결과를 구한다.
+
+```sql
+-- 과목별 수강 인원
+select c.title, count(e.student_id) as student_count
+from courses c
+left join enrollments e on c.id = e.course_id
+group by c.id, c.title;
+```
+
+`LEFT JOIN`을 사용했으므로 수강생이 없는 과목도 포함되며, 해당 과목의 수강 인원은 `0`으로 표시된다.
+
+#### HAVING
+
+`HAVING`은 그룹화한 결과에 조건을 지정한다. 일반 행은 `WHERE`, 집계 결과는 `HAVING`으로 필터링한다.
+
+```sql
+-- 수강 인원이 2명 이상인 과목
+select c.title, count(e.student_id) as student_count
+from courses c
+join enrollments e on c.id = e.course_id
+group by c.id, c.title
+having count(e.student_id) >= 2;
+```
+
+### 트랜잭션 (Transaction)
+
+트랜잭션은 여러 SQL 작업을 하나의 작업 단위로 묶는 기능이다. 모든 작업이 성공하면 `COMMIT`하여 변경 사항을 확정하고, 오류가 발생하거나 작업을 취소하려면 `ROLLBACK`하여 트랜잭션 시작 전 상태로 되돌린다.
+
+#### DBeaver 트랜잭션 설정
+
+- PostgreSQL은 기본 트랜잭션이 실행된다.
+- DBeaver에서 트랜잭션 설정을 변경할 수 있다.
+- `데이터베이스 > 트랜잭션 모드 > Manual Commit`으로 변경한 후 작업한다.
+
+<img src="./img/트랜잭션%20설정.png" alt="DBeaver에서 트랜잭션 모드를 Manual Commit으로 변경하는 화면" width="900">
+
+#### 트랜잭션의 ACID 특성
+
+| 특성 | 의미 | 설명 |
+| --- | --- | --- |
+| 원자성 (Atomicity) | All or Nothing | 작업 전체가 모두 반영되거나 모두 취소되어야 한다. |
+| 일관성 (Consistency) | 데이터 규칙 유지 | 트랜잭션 전후에도 제약 조건 등 데이터베이스의 규칙이 유지되어야 한다. |
+| 고립성 (Isolation) | 트랜잭션 간 분리 | 동시에 실행되는 트랜잭션이 서로의 작업을 방해하지 않아야 한다. |
+| 지속성 (Durability) | 결과 영구 보존 | `COMMIT`된 데이터는 장애가 발생해도 보존되어야 한다. |
+
+#### 트랜잭션 주요 명령어
+
+| 명령어 | 설명 |
+| --- | --- |
+| `BEGIN` | 트랜잭션 시작 |
+| `BEGIN TRANSACTION` | 트랜잭션 시작 (`BEGIN`과 같은 의미) |
+| `COMMIT` | 트랜잭션의 변경 사항을 최종 반영 |
+| `ROLLBACK` | 트랜잭션의 변경 사항을 취소 |
+
+```sql
+begin;
+-- 또는 begin transaction;
+
+update students
+set name = '김학생'
+where id = 1;
+
+commit;
+```
+
+작업 도중 문제가 발생했다면 `COMMIT` 대신 `ROLLBACK`을 실행한다.
+
+```sql
+begin;
+
+update students
+set name = '김학생'
+where id = 1;
+
+rollback;
+```
+
+`ROLLBACK`을 실행하면 위 `UPDATE`의 변경 사항은 데이터베이스에 반영되지 않는다.
